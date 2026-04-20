@@ -1,9 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+let supabase: ReturnType<typeof createClient> | null = null
+
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+  }
+  return supabase
+}
 
 export interface Product {
   id: string
@@ -26,7 +33,8 @@ export interface ProductInput {
 
 // Get all products
 export async function getProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
+  const sb = getSupabase()
+  const { data, error } = await sb
     .from('products')
     .select('*')
     .order('created_at', { ascending: false })
@@ -37,7 +45,8 @@ export async function getProducts(): Promise<Product[]> {
 
 // Get single product
 export async function getProduct(id: string): Promise<Product | null> {
-  const { data, error } = await supabase
+  const sb = getSupabase()
+  const { data, error } = await sb
     .from('products')
     .select('*')
     .eq('id', id)
@@ -49,7 +58,8 @@ export async function getProduct(id: string): Promise<Product | null> {
 
 // Create product
 export async function createProduct(input: ProductInput): Promise<Product> {
-  const { data, error } = await supabase
+  const sb = getSupabase()
+  const { data, error } = await sb
     .from('products')
     .insert({
       ...input,
@@ -67,7 +77,8 @@ export async function updateProduct(
   id: string,
   input: Partial<ProductInput>
 ): Promise<Product> {
-  const { data, error } = await supabase
+  const sb = getSupabase()
+  const { data, error } = await sb
     .from('products')
     .update(input)
     .eq('id', id)
@@ -80,7 +91,8 @@ export async function updateProduct(
 
 // Delete product
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase.from('products').delete().eq('id', id)
+  const sb = getSupabase()
+  const { error } = await sb.from('products').delete().eq('id', id)
 
   if (error) throw error
 }
@@ -90,10 +102,11 @@ export async function uploadProductImage(
   file: File,
   productId: string
 ): Promise<string> {
+  const sb = getSupabase()
   const fileExt = file.name.split('.').pop()
   const fileName = `${productId}-${Date.now()}.${fileExt}`
 
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await sb.storage
     .from('products')
     .upload(`images/${fileName}`, file, {
       upsert: true,
@@ -103,7 +116,7 @@ export async function uploadProductImage(
 
   const {
     data: { publicUrl },
-  } = supabase.storage.from('products').getPublicUrl(`images/${fileName}`)
+  } = sb.storage.from('products').getPublicUrl(`images/${fileName}`)
 
   return publicUrl
 }
@@ -111,10 +124,11 @@ export async function uploadProductImage(
 // Delete product image
 export async function deleteProductImage(imageUrl: string): Promise<void> {
   try {
+    const sb = getSupabase()
     const fileName = imageUrl.split('/').pop()
     if (!fileName) return
 
-    const { error } = await supabase.storage
+    const { error } = await sb.storage
       .from('products')
       .remove([`images/${fileName}`])
 
