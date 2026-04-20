@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-import { updateProduct, deleteProduct, getProductById } from '@/lib/db';
+import { updateProduct, deleteProduct, getProduct } from '@/lib/db';
 import { deleteProductImage } from '@/lib/storage';
 
 export async function GET(
@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const product = await getProductById(id);
+    const product = await getProduct(id);
 
     if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
@@ -72,7 +72,7 @@ export async function DELETE(
     const { id } = await params;
 
     // Get product to get image URL
-    const product = await getProductById(id);
+    const product = await getProduct(id);
     if (product?.image_url) {
       await deleteProductImage(product.image_url);
     }
